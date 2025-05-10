@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Product = require("../models/product");
 const sanitizeHtml = require('sanitize-html');
 const Category = require("../models/categories");
+const mongoose = require('mongoose');
 
 // Helper function to sanitize product input
 const sanitizeProductInput = (body, user) => {
@@ -33,6 +34,7 @@ const sanitizeProductInput = (body, user) => {
     
     return sanitized;
 };
+
 exports.generateSkuCode = asyncHandler(async(req, res)=> {
    try {
     const prefix = req.query.prefix || 'PT';
@@ -116,4 +118,40 @@ exports.addNewProduct = asyncHandler(async (req, res) => {
         success: true,
         data: savedProduct
     });
+});
+
+
+
+exports.filterProduct = asyncHandler(async (req, res) => {
+  const { category, search } = req.query;
+  const filter = {};
+
+  // Handle category filtering
+  if (category && category !== 'all') {
+    if (mongoose.Types.ObjectId.isValid(category)) {
+      filter.category = category;
+    } else {
+      const cat = await Category.findOne({ name: { $regex: `^${category}$`, $options: 'i' } });      if (cat) {
+        filter.category = cat._id;
+      } else {
+        return res.status(404).json({ success: false, message: "Category not found" });
+      }
+    }
+  }
+
+  // Handle search filtering
+  if (search) {
+    filter.$or = [
+      { productName: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  const products = await Product.find(filter).populate('category', 'name');
+
+  res.status(200).json({
+    success: true,
+    count: products.length,
+    data: products
+  });
 });

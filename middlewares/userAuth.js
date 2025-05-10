@@ -3,10 +3,10 @@ const User = require("../models/User");
 require('dotenv').config();
 
 const userAuth = async (req, res, next) => {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
-console.log("Received Token:", token);
+    // const token = req.header("Authorization")?.replace("Bearer ", "");
+// console.log("Received Token:", token);
 
-    // const { token } = req.cookies;
+    const { token } = req.cookies;
     console.log("Token from cookies:", token);
 
     if (!token) {

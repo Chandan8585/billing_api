@@ -8,6 +8,6 @@ router.get("/productList", productController.getProductList);
 router.get("/generate-sku-code", productController.generateSkuCode);
 router.get("/productList/:id", productController.getProductById);
 router.post("/addNewProduct", validateProduct, productController.addNewProduct);
-
+router.get("/filter", productController.filterProduct);
 
 module.exports = router;

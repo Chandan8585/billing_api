@@ -17,8 +17,11 @@ require('dotenv').config()
     const app = express();
     app.use(express.json());
     app.use(cookieParser());
-
-    app.use(cors());
+    const corsOptions = {
+        origin: "http://localhost:3000", // Your frontend URL
+        credentials: true, // Allow cookies
+      };
+    app.use(cors(corsOptions));
 app.use("/", authRouter);
 app.use("/", profileRouter); 
 app.use("/store", storeRouter);
