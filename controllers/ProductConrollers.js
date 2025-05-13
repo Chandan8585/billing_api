@@ -3,7 +3,8 @@ const Product = require("../models/product");
 const sanitizeHtml = require('sanitize-html');
 const Category = require("../models/categories");
 const mongoose = require('mongoose');
-
+const { uploadCloudinary } = require('../utils/cloudinary.js');
+const fs = require('fs');
 // Helper function to sanitize product input
 const sanitizeProductInput = (body, user) => {
     const allowedFields = [
@@ -61,8 +62,8 @@ exports.getProductList = asyncHandler(async (req, res) => {
     
     const [products, total] = await Promise.all([
         Product.find({})
-          .populate('category') // populate 'category' field, only include 'name'
-          .populate('createdBy') // populate 'createdBy', only include 'name' and 'email'
+          .populate('category') 
+          .populate('createdBy') 
           .skip(skip)
           .limit(limit)
           .lean(),
@@ -110,6 +111,25 @@ exports.addNewProduct = asyncHandler(async (req, res) => {
     // Sanitize and prepare product data
     const productData = sanitizeProductInput(req.body, req.user);
     
+    if (req.file) {
+      try {
+        const uploadResult = await uploadCloudinary(req.file.path);
+
+        if (!uploadResult) {
+          throw new Error("Failed to upload image");
+        }
+
+        req.body.thumbnail = uploadResult.secure_url;
+
+        // Delete the temporary file
+        fs.unlinkSync(req.file.path);
+      } catch (uploadError) {
+        if (req.file && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        return res.status(500).send({ error: "Image upload failed" });
+      }
+    }
     // Create and save product
     const product = new Product(productData);
     const savedProduct = await product.save();

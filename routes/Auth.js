@@ -61,8 +61,23 @@ authRouter.post('/login', async (req, res) => {
             maxAge: 24 * 60 * 60 * 1000 
         });
     
-        res.status(200).json({ message: "Login successful!", token });
-        
+        res.status(200).json({
+            message: "Login successful!",   
+            user: {
+            // id: user._id,
+            photoUrl: user.photoUrl,
+            email: user.email,
+            company: user.company,
+            store: user.store,
+            warehouse: user.warehouse,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userName: user.userName,
+            role: user.role,
+            mobile: user.mobile,
+            Address: user.Address
+          } });
+    
     } catch (error) {
         console.error("Login Error:", error);
         res.status(500).json({ message: "Server error. Please try again later." });

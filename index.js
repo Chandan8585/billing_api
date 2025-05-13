@@ -23,12 +23,11 @@ require('dotenv').config()
       };
     app.use(cors(corsOptions));
 app.use("/", authRouter);
-app.use("/", profileRouter); 
+app.use("/user", profileRouter); 
 app.use("/store", storeRouter);
 app.use("/cart", cartRouter);
 app.use("/category", categoryRouter);
 app.use("/product", productRoutes);
-
 app.use("/customer", customerRouter);
 app.post('/orders', userAuth, async (req, res) => {
     const { dishId, quantity } = req.body;   
