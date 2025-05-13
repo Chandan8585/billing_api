@@ -19,7 +19,7 @@ require('dotenv').config()
     app.use(cookieParser());
     const corsOptions = {
         origin: "http://localhost:3000", // Your frontend URL
-        credentials: true, // Allow cookies
+        credentials: true, 
       };
     app.use(cors(corsOptions));
 app.use("/", authRouter);
