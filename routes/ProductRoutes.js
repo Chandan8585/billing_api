@@ -2,14 +2,18 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/ProductConrollers');
 const { userAuth } = require('../middlewares/userAuth');
-const { validateProduct } = require('../middlewares/validations/productValidation');
+// const { validateProduct } = require('../middlewares/validations/productValidation');
 const { singleImage } = require('../middlewares/multer.middleware');
-
-
+const brandController = require('../controllers/BrandControllers');
+const unitController = require('../controllers/UnitController');
 router.get("/productList", productController.getProductList);
-router.get("/generate-sku-code", productController.generateSkuCode);
+router.get("/generateProductId", productController.generateProductId);
 router.get("/productList/:id", productController.getProductById);
-router.post("/addNewProduct", validateProduct, userAuth, singleImage, productController.addNewProduct);
+router.delete("/product/:id" , productController.deleteProductById);
+router.post("/addNewProduct", userAuth, singleImage, productController.addNewProduct);
 router.get("/filter", productController.filterProduct);
-
+router.get("/brand", brandController.getBrandList);
+router.post("/addNewBrand", userAuth, singleImage, brandController.addNewBrand);
+router.get("/unit", unitController.getUnitList);
+router.post("/addNewUnit", userAuth, unitController.addNewUnit);
 module.exports = router;

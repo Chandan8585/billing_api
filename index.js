@@ -22,6 +22,7 @@ require('dotenv').config()
         credentials: true, 
       };
     app.use(cors(corsOptions));
+    app.use(express.urlencoded({ extended: true }));
 app.use("/", authRouter);
 app.use("/user", profileRouter); 
 app.use("/store", storeRouter);

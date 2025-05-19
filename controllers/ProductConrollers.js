@@ -6,54 +6,104 @@ const mongoose = require('mongoose');
 const { uploadCloudinary } = require('../utils/cloudinary.js');
 const fs = require('fs');
 // Helper function to sanitize product input
-const sanitizeProductInput = (body, user) => {
-    const allowedFields = [
-        'productName', 'description', 'saleRate', 'quantity', 'category',
-        'sku', 'store', 'warehouse', 'gstType', 'gstRate', 'brand', 
-        'quantityAlert', 'discountType', 'discountValue', 'warrantyType',
-        'warrantyPeriod', 'manufacturedDate', 'expiry', 'barcodeSymbology',
-        'itemCode', 'discount', 'image', 'fastMoving', 'hsn', 'counter', 'unit'
-    ];
-    
-    const sanitized = {};
-    
-    allowedFields.forEach(field => {
-        if (body[field] !== undefined) {
-            if (typeof body[field] === 'string') {
-                sanitized[field] = sanitizeHtml(body[field], {
-                    allowedTags: [],
-                    allowedAttributes: {}
-                }).trim();
-            } else {
-                sanitized[field] = body[field];
-            }
-        }
-    });
-    
-    // Set server-controlled fields
-    // sanitized.createdBy = user._id;
-    
-    return sanitized;
-};
+  const sanitizeProductInput = (body, user) => {
+      const allowedFields = [
+          'productId', 'thumbnail', 'Image',
+          'productName', 'description', 'saleRate', 'quantity', 'category',
+          'sku', 'store', 'warehouse', 'gstType', 'gstRate', 'brand', 
+          'quantityAlert', 'discountType', 'discountValue', 'warrantyType',
+          'warrantyPeriod', 'manufacturedDate', 'expiry', 'barcodeSymbology',
+          'itemCode', 'discount', 'image', 'fastMoving', 'counter', 'unit',
+            'hsnCode', 'subCategory', 'warranty','manufacturer'
+      ];
+      
+      const sanitized = {};
+      
+      allowedFields.forEach(field => {
+          if (body[field] !== undefined) {
+              if (typeof body[field] === 'string') {
+                  sanitized[field] = sanitizeHtml(body[field], {
+                      allowedTags: [],
+                      allowedAttributes: {}
+                  }).trim();
+              } else {
+                  sanitized[field] = body[field];
+              }
+          }
+      });
+      
+      // Set server-controlled fields
+      // sanitized.createdBy = user._id;
+      
+      return sanitized;
+  };
 
-exports.generateSkuCode = asyncHandler(async(req, res)=> {
-   try {
-    const prefix = req.query.prefix || 'PT';
-    const digits = req.query.digits || 3;
-    const lastSku = await Product.findOne({
-        sku: new RegExp(`^${prefix}-\\d+$`)
-    }).sort('-sku');
-    let nextNumber = 1;
-    if(lastSku){
-        const lastNumber = parseInt(lastSku.sku.replace(`${prefix}-`, ''));
-        nextNumber = lastNumber + 1;
+exports.addNewProduct = asyncHandler(async (req, res) => {
+    // Directly use the request body without sanitization
+    const productData = req.body;
+    
+    // Handle file upload if present
+    if (req.file) {
+        try {
+            const uploadResult = await uploadCloudinary(req.file.path);
+            
+            // Add image URLs to product data
+            productData.thumbnail = uploadResult.secure_url;
+            productData.image = [uploadResult.secure_url];
+            
+            // Clean up temp file
+            fs.unlinkSync(req.file.path);
+        } catch (uploadError) {
+            // Clean up temp file if upload fails
+            if (req.file && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+            return res.status(500).send({ 
+                success: false,
+                error: "Image upload failed" 
+            });
+        }
     }
-    const newCode = `${prefix}-${nextNumber.toString().padStart(digits, '0')}`;
-    res.json({code: newCode});
-   } catch (err) {
-     res.status(500).json({error: err.message});
-   }
-})
+    
+    try {
+        // Create and save product
+        const product = new Product(productData);
+        const savedProduct = await product.save();
+        
+        res.status(201).json({
+            success: true,
+            data: savedProduct
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+exports.generateProductId = asyncHandler(async (req, res) => {
+  try {
+    const prefix = req.query.prefix || 'PID'; // Default prefix for productId
+    const digits = req.query.digits || 4; // Default digits (e.g., PID-0001)
+    
+    // Find the last product with a matching productId pattern
+    const lastProduct = await Product.findOne({
+      productId: new RegExp(`^${prefix}-\\d+$`)
+    }).sort({ productId: -1 }); // Sort descending to get the latest
+
+    let nextNumber = 1;
+    if (lastProduct) {
+      const lastNumber = parseInt(lastProduct.productId.replace(`${prefix}-`, ''));
+      nextNumber = lastNumber + 1;
+    }
+
+    const newProductId = `${prefix}-${nextNumber.toString().padStart(digits, '0')}`;
+    res.json({ productId: newProductId });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 exports.getProductList = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -62,6 +112,8 @@ exports.getProductList = asyncHandler(async (req, res) => {
     
     const [products, total] = await Promise.all([
         Product.find({})
+          .populate('brand')
+          .populate('unit')
           .populate('category') 
           .populate('createdBy') 
           .skip(skip)
@@ -83,6 +135,8 @@ exports.getProductList = asyncHandler(async (req, res) => {
 exports.getProductById = asyncHandler(async(req, res)=>{
        const _id = req.params.id;
     const product = await Product.findById(_id)
+        .populate('brand')
+        .populate('unit')
         .populate('category')
         .populate('createdBy');
     
@@ -98,6 +152,25 @@ exports.getProductById = asyncHandler(async(req, res)=>{
         data: product
     });
 });
+exports.deleteProductById = asyncHandler(async (req, res) => {
+    const _id = req.params.id;
+
+    const product = await Product.findById(_id);
+
+    if (!product) {
+        return res.status(404).json({
+            success: false,
+            message: 'Product not found',
+        });
+    }
+
+    await product.deleteOne(); // or Product.findByIdAndDelete(_id)
+
+    res.status(200).json({
+        success: true,
+        message: 'Product deleted successfully',
+    });
+});
 exports.getCategoryList = asyncHandler(async (req, res) => {
     const categories = await Category.find({}, 'name description');
     res.status(200).json({
@@ -107,38 +180,6 @@ exports.getCategoryList = asyncHandler(async (req, res) => {
     });
 });
 
-exports.addNewProduct = asyncHandler(async (req, res) => {
-    // Sanitize and prepare product data
-    const productData = sanitizeProductInput(req.body, req.user);
-    
-    if (req.file) {
-      try {
-        const uploadResult = await uploadCloudinary(req.file.path);
-
-        if (!uploadResult) {
-          throw new Error("Failed to upload image");
-        }
-
-        req.body.thumbnail = uploadResult.secure_url;
-
-        // Delete the temporary file
-        fs.unlinkSync(req.file.path);
-      } catch (uploadError) {
-        if (req.file && fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        return res.status(500).send({ error: "Image upload failed" });
-      }
-    }
-    // Create and save product
-    const product = new Product(productData);
-    const savedProduct = await product.save();
-    
-    res.status(201).json({
-        success: true,
-        data: savedProduct
-    });
-});
 
 
 

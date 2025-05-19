@@ -6,10 +6,9 @@ const { singleImage } = require('../middlewares/multer.middleware');
 const { uploadCloudinary } = require('../utils/cloudinary.js');
 const fs = require('fs');
 
-// Get profile
 profileRouter.get("/profile", userAuth, async (req, res) => {
   try {
-    const user = req.user; // Changed from User to user (convention)
+    const user = req.user; 
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error: "Something went wrong" });
@@ -34,7 +33,7 @@ profileRouter.patch("/profile", userAuth, singleImage, async (req, res) => {
         if (req.file && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
-        return res.status(500).send({ error: "Image upload failed" });
+        return res.status(500).send({  success: false, error: "Image upload failed" });
       }
     }
 

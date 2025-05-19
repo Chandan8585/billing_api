@@ -3,15 +3,12 @@ const Category = require('../models/categories');
 const { userAuth } = require('../middlewares/userAuth');
 const categoryRouter = express.Router();
 const sanitizeHtml = require('sanitize-html');
+const { singleImage } = require('../middlewares/multer.middleware');
 
 // Helper function to sanitize product input
 const sanitizeCategoryInput = (body, user) => {
     const allowedFields = [
-        'name', 'description', 'price', 'originalPrice', 'quantity', 'category',
-        'sku', 'store', 'warehouse', 'gstType', 'gstRate', 'brand', 
-        'quantityAlert', 'discountType', 'discountValue', 'warrantyType',
-        'warrantyPeriod', 'manufacturedDate', 'expiry', 'barcodeSymbology',
-        'itemCode', 'discount', 'image', 'fastMoving', 'hsn', 'counter', 'unit'
+        'name', 'subCategory', 'categoryCode', 'thumbnail'
     ];
     
     const sanitized = {};
@@ -128,10 +125,9 @@ categoryRouter.patch("/", userAuth, async (req, res) => {
 });
 
 
-categoryRouter.post("/add-category", userAuth, async (req, res)=>{
+categoryRouter.post("/add-category", userAuth, singleImage ,async (req, res)=>{
     try {  
         const categoryData = sanitizeCategoryInput(req.body, req.user);
-
         const newCategory = new Category(categoryData);
         const savedCategory = await newCategory.save();
         res.status(201).json({
