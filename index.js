@@ -65,9 +65,10 @@ app.get('/counter', async(req, res)=>{
     }
 })
 
-
+app.get('/', (req, res) => res.send('API Running!'));
 
 connectDB().then(()=>app.listen(5001, ()=>{
-        console.log("running on port 5001");
+
+    console.log("running on port 5001");
     })
     )
