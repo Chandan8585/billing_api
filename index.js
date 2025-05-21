@@ -18,8 +18,21 @@ require('dotenv').config()
     app.use(express.json());
     app.use(cookieParser());
     const corsOptions = {
-        origin: "http://localhost:3000", // Your frontend URL
-        credentials: true, 
+        origin: true, // Reflects the request origin
+        credentials: true,
+        optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: [
+          'Content-Type',
+          'Authorization',
+          'X-Requested-With',
+          'Accept',
+          'Origin',
+          'Access-Control-Allow-Headers',
+          'Access-Control-Request-Headers',
+          'Access-Control-Allow-Origin'
+        ],
+        exposedHeaders: ['Content-Length', 'Authorization']
       };
     app.use(cors(corsOptions));
     app.use(express.urlencoded({ extended: true }));
