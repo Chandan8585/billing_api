@@ -17,8 +17,13 @@ require('dotenv').config()
     const app = express();
     app.use(express.json());
     app.use(cookieParser());
-  
-    app.use(cors(corsOptions));
+    const corsOptions = {
+        origin: '*', // Allow all origins
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Common methods
+        allowedHeaders: ['Content-Type', 'Authorization'], // Basic headers
+      };
+      
+      app.use(cors(corsOptions));
     app.use(express.urlencoded({ extended: true }));
 app.use("/", authRouter);
 app.use("/user", profileRouter); 
