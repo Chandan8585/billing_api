@@ -29,13 +29,7 @@ require('dotenv').config()
         'Content-Disposition' 
         ]
       };
-      
-
-      app.use(cors(corsOptions));
-      
-      // Explicitly handle preflight requests
-      app.options('*', cors(corsOptions)); // Wildcard or specific routes
-      
+      app.options('*', cors(corsOptions)); // Wildcard or specific routes     
       app.use(cors(corsOptions));
     app.use(express.urlencoded({ extended: true }));
 app.use("/", authRouter);
