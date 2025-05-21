@@ -18,10 +18,23 @@ require('dotenv').config()
     app.use(express.json());
     app.use(cookieParser());
     const corsOptions = {
-        origin: '*', // Allow all origins
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Common methods
-        allowedHeaders: ['Content-Type', 'Authorization'], // Basic headers
+        origin: 'https://poshw.net', 
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
+        allowedHeaders: ['Content-Type',  'X-Requested-With',
+            'Accept',
+            'Content-Disposition' 
+          ],
+        exposedHeaders: [
+        'Content-Disposition' 
+        ]
       };
+      
+
+      app.use(cors(corsOptions));
+      
+      // Explicitly handle preflight requests
+      app.options('*', cors(corsOptions)); // Wildcard or specific routes
       
       app.use(cors(corsOptions));
     app.use(express.urlencoded({ extended: true }));
