@@ -22,8 +22,7 @@ require('dotenv').config()
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], 
         credentials: true, 
       }));
-      app.options('*', cors(corsOptions)); // Wildcard or specific routes     
-      app.use(cors(corsOptions));
+  
     app.use(express.urlencoded({ extended: true }));
 app.use("/", authRouter);
 app.use("/user", profileRouter); 
