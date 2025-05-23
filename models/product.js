@@ -8,7 +8,6 @@ const productSchema = new mongoose.Schema({
     unique: true,
     validate: {
       validator: function(v) {
-        // Validate format like "PID-0001"
         return /^[A-Z]+-\d+$/.test(v);
       },
       message: props => `${props.value} is not a valid productId format (e.g., PID-0001)`
@@ -47,7 +46,6 @@ const productSchema = new mongoose.Schema({
     discount: { type: String },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' ,required: true },
     thumbnail: {type: String},
-    // Image: {type: String},
     image: { type: Array, 
     default: ['https://plus.unsplash.com/premium_photo-1681702307633-a27a52914043?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'] 
     },
@@ -63,6 +61,7 @@ const productSchema = new mongoose.Schema({
     slug: {type: String},
     counter: { type: String },
     unit: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit'  },
+    status: {type: Boolean, default: true},
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });

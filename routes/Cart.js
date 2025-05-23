@@ -2,7 +2,9 @@ const express = require('express');
 const { userAuth } = require('../middlewares/userAuth'); // Middleware for user authentication
 const Cart = require('../models/cart'); // Cart model
 const Product = require('../models/product'); // Product model
-
+const { calculateOrderTotals } = require('../utils/orderCalculations');
+const { mongoose } = require('mongoose');
+const Order = require('../models/order');
 const cartRouter = express.Router();
 
 // Get cart items
@@ -136,63 +138,117 @@ cartRouter.post('/cart/:productId', userAuth, async (req, res) => {
 });
 
 // Calculate cart totals
+
 cartRouter.get('/totals', userAuth, async (req, res) => {
+  try {
+    const { subtotal, tax, discount, total } = await calculateOrderTotals(req.user._id);
+    
+    res.status(200).json({ subtotal, tax, discount, total });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to calculate totals" });
+  }
+});
+const createOrder = async (userId) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-        const userId = req.user._id;
-        const cartItems = await Cart.find({ user: userId }).populate('product');
+        // Get populated cart items
+        const cartItems = await Cart.find({ user: userId })
+            .populate('product')
+            .session(session);
 
-        let subtotal = 0;
-        let totalTax = 0;
-        let totalDiscount = 0;
-
-        for (const cartItem of cartItems) {
-            const product = cartItem.product;
-            const quantity = cartItem.quantity;
-            let saleRate = product.saleRate || 0;
-
-            let discountAmount = 0;
-            if (product.discountType === 'percentage') {
-                discountAmount = (saleRate * product.discountValue) / 100;
-            } else if (product.discountType === 'fixed') {
-                discountAmount = product.discountValue;
-            }
-
-            const discountedPrice = saleRate - discountAmount;
-
-            // Calculate GST
-            let gstAmount = 0;
-            if (product.gstType === false) {
-                // GST exclusive — add GST
-                gstAmount = (discountedPrice * product.gstRate) / 100;
-            } else {
-                // GST inclusive — extract GST
-                gstAmount = discountedPrice - (discountedPrice * 100) / (100 + product.gstRate);
-            }
-
-            const finalRatePerUnit = product.gstType === false
-                ? discountedPrice + gstAmount
-                : discountedPrice;
-
-            const lineTotal = finalRatePerUnit * quantity;
-
-            subtotal += lineTotal;
-            totalTax += gstAmount * quantity;
-            totalDiscount += discountAmount * quantity;
+        if (!cartItems.length) {
+            throw new Error("Cart is empty");
         }
 
-        const total = subtotal;
+        // Prepare order items with all required fields
+        const orderItems = cartItems.map(item => ({
+            product: item.product._id,
+            quantity: item.quantity,
+            saleRate: item.saleRate,
+            productName: item.product.productName,
+            productCategory: item.product.category.name   
 
-        res.status(200).json({
-            subtotal: Math.round((subtotal - totalTax) * 100) / 100,
-            tax: Math.round(totalTax * 100) / 100,
-            discount: Math.round(totalDiscount * 100) / 100,
-            total: Math.round(total * 100) / 100,
+        }));
+
+        // Calculate totals
+        const subtotal = cartItems.reduce((sum, item) => 
+            sum + (item.saleRate * item.quantity), 0);
+        const gst = subtotal * 0.18;
+        const discount = 0;
+        const total = subtotal + gst - discount;
+
+        // Create order
+        const order = new Order({
+            user: userId,
+            items: orderItems,
+            amount: {
+                subtotal: Math.round(subtotal * 100) / 100,
+                gst: Math.round(gst * 100) / 100,
+                serviceTax: 0,
+                discount: Math.round(discount * 100) / 100,
+                total: Math.round(total * 100) / 100
+            }
         });
+
+        await order.save({ session });
+        await Cart.deleteMany({ user: userId }, { session });
+        await session.commitTransaction();
+        
+        return order;
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to calculate totals" });
+        await session.abortTransaction();
+        throw error;
+    } finally {
+        session.endSession();
+    }
+};
+// Usage in route:
+cartRouter.post('/create-order', userAuth, async (req, res) => {
+    try {
+      const order = await createOrder(req.user._id); // Pass items to createOrder
+      
+      res.status(201).json({
+        success: true,
+        order: {
+          billNumber: order.billNumber,
+          items: order.items, // Include items in response
+          amount: order.amount,
+          date: order.createdAt
+        }
+      });
+    } catch (error) {
+      console.error('[Order Error]', error);
+      const statusCode = error.message.includes("empty") ? 400 : 500;
+      res.status(statusCode).json({
+        success: false,
+        error: error.message
+      });
     }
 });
+cartRouter.get('/get-all-orders', async(req, res) => {
+    try {
+        const allOrders = await Order.find({})
+            .populate("user")
+            .populate({
+                path: "items.product",
+                model: "Product",
+                select: "name price images category" // Include needed fields
+            });
 
-
+        res.status(200).json({
+            success: true,
+            data: allOrders
+        });
+    } catch (error) {
+        console.error('[Order Error]', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+// cartRouter.get("/orderList", )
 module.exports = cartRouter;

@@ -18,7 +18,7 @@ require('dotenv').config()
     app.use(express.json());
     app.use(cookieParser());
     const corsOptions = {
-        origin: 'https://poshw.net', 
+        origin: 'http://localhost:3000', 
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
         allowedHeaders: ['Content-Type',  'X-Requested-With',
