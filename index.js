@@ -13,6 +13,8 @@ const productRoutes = require('./routes/ProductRoutes');
 const { customerRouter } = require('./routes/Customer');
 const Counter = require('./models/counter');
 const { storeRouter } = require('./routes/Store');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 require('dotenv').config()
     const app = express();
     app.use(express.json());
@@ -32,6 +34,14 @@ require('dotenv').config()
             'Accept'
           ]
       };
+      const limiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 50
+      });
+      app.use(limiter);
+      
+      // Add helmet for security headers
+      app.use(helmet());
       app.options('*', cors(corsOptions)); // Wildcard or specific routes     
       app.use(cors(corsOptions));
     app.use(express.urlencoded({ extended: true }));
