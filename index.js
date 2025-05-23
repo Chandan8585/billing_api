@@ -17,12 +17,23 @@ require('dotenv').config()
     const app = express();
     app.use(express.json());
     app.use(cookieParser());
-    app.use(cors({
-        origin: "*", 
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], 
-        credentials: true, 
-      }));
-  
+   
+    const corsOptions = {
+        origin: [
+            'http://localhost:3000',
+            'https://poshw.net' 
+          ], 
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization', 
+            'X-Requested-With',
+            'Accept'
+          ]
+      };
+      app.options('*', cors(corsOptions)); // Wildcard or specific routes     
+      app.use(cors(corsOptions));
     app.use(express.urlencoded({ extended: true }));
 app.use("/", authRouter);
 app.use("/user", profileRouter); 
